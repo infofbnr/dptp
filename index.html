@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🍬 DPTP!</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-yellow-100 to-amber-200 min-h-screen flex flex-col items-center justify-center font-sans">
+
+  <div id="welcomeScreen" class="w-full max-w-md p-6 bg-white shadow-2xl rounded-xl text-center space-y-4">
+    <h1 class="text-3xl font-bold">🍬 Don't Pick the Poisoned!</h1>
+    <input id="playerName" type="text" placeholder="Your Name" class="w-full px-4 py-2 border rounded-md" />
+    <div class="flex flex-col gap-2 mt-4">
+      <button id="createRoom" class="bg-green-500 text-white py-2 rounded hover:bg-green-600">Create Game</button>
+      <div class="flex items-center gap-2">
+        <input id="roomCodeInput" type="text" placeholder="Room Code" class="flex-grow px-3 py-2 border rounded-md" />
+        <button id="joinRoom" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Join</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="hidden flex flex-col items-center gap-4 w-full max-w-xl p-6">
+    <div class="text-xl font-semibold" id="turnDisplay"></div>
+    <button id="rematchBtn" style="display:none;">Request Rematch</button>
+<div id="rematchRequestMessage" style="display:none;"></div>
+<button id="approveRematchBtn" style="display:none;">Approve Rematch</button>
+<div id="winnerScreen" class="hidden">
+  <div id="player1Status" class="status-label"></div>
+  <div id="player2Status" class="status-label"></div>
+  <div id="winnerText"></div>
+</div>
+
+    <div class="grid grid-cols-5 gap-4" id="mmGrid"></div>
+    <div class="mt-4 hidden text-center" id="winnerScreen">
+      <h2 class="text-2xl font-bold text-green-700" id="winnerText"></h2>
+      <button onclick="location.reload()" class="mt-2 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">Play Again</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
