@@ -72,26 +72,46 @@ createRoomBtn.addEventListener("click", async () => {
   turnDisplay.textContent = `Waiting for other player to join... (Room Code: ${roomCode})`;
 
   // Listen for changes to the room (especially for Player 2 joining)
-  gameDataUnsubscribe = onSnapshot(doc(db, "games", roomCode), (docSnap) => {
-    if (!docSnap.exists()) return;
+gameDataUnsubscribe = onSnapshot(doc(db, "games", roomCode), (docSnap) => {
+  if (!docSnap.exists()) return;
 
-    const data = docSnap.data();
+  const data = docSnap.data();
 
-    // Detect when Player 2 joins
-    if (playerRole === "P1" && data.players.P2) {
-      turnDisplay.textContent = `Player 2 (${data.players.P2}) joined! Starting game...`;
+  if (playerRole === "P1") {
+    // Player 1 waiting for Player 2 to join
+if (!data.players.P2) {
+  turnDisplay.textContent = `Waiting for Player 2 to join... (Room Code: ${roomCode})`;
+} else if (data.poisonedByP2 === null) {
+  turnDisplay.textContent = `Player 2 (${data.players.P2}) joined! Pick your poisoned M&M first.`;
+    } else {
+      // Both poisoned picked, game starting
       startGame(data);
     }
+  }
 
-    // Detect if game updated while waiting
-    if (data.gameOver) {
-      endGame(data.winnerMessage);
+  if (playerRole === "P2") {
+    if (!data.players.P1) {
+      turnDisplay.textContent = "Waiting for Player 1 (host)...";
+    } else if (data.poisonedByP1 === null) {
+      turnDisplay.textContent = `Waiting for ${player1Name} to pick poisoned M&M...`;
+    } else if (data.poisonedByP2 === null) {
+      // It's Player 2's turn to pick poisoned M&M
+      turnDisplay.textContent = `Your turn: pick your poisoned M&M`;
+    } else {
+      // Both poisoned picked, game starting
+      startGame(data);
     }
-  });
+  }
+  
+  // Check if game over
+  if (data.gameOver) {
+    endGame(data.winnerMessage, data.winnerRole);
+  }
+});
 });
 
 joinRoomBtn.addEventListener("click", async () => {
-    player2Name = playerNameInput.value.trim();
+  player2Name = playerNameInput.value.trim();
   if (!player2Name) {
     alert("Please enter your name");
     return;
@@ -134,16 +154,29 @@ joinRoomBtn.addEventListener("click", async () => {
 
     const data = docSnap.data();
 
+    // If game is over
     if (data.gameOver) {
-      endGame(data.winnerMessage);
+      endGame(data.winnerMessage, data.winnerRole);
+      return;
     }
 
-    // Once both players have poisoned M&Ms chosen, start the turns
-    if (data.poisonedByP1 !== null && data.poisonedByP2 !== null && data.currentTurn) {
+    // Update UI based on game state for Player 2
+    if (data.poisonedByP1 === null) {
+  turnDisplay.textContent = `Waiting for ${data.players.P1} to pick poisoned M&M...`;
+} else if (data.poisonedByP2 === null) {
+  turnDisplay.textContent = `${data.players.P1} picked their poisoned M&M first. Your turn: pick your poisoned M&M.`;
+} else if (data.currentTurn) {
+      // Normal gameplay turns
+      if (data.currentTurn === "P2") {
+        turnDisplay.textContent = `Your turn: pick an M&M to eat`;
+      } else {
+        turnDisplay.textContent = `Waiting for ${data.players.P1} to pick an M&M...`;
+      }
       updateGameUI(data);
     }
   });
 });
+
 
 // Utility to generate a 5-letter room code (random uppercase letters)
 function generateRoomCode() {
@@ -196,7 +229,7 @@ async function handleClick(index) {
   if (playerRole === "P1" && poisonedByP1 === null) {
     poisonedByP1 = index;
     await updateGameField("poisonedByP1", index);
-    turnDisplay.textContent = `Waiting for Player 2 to choose poisoned M&M...`;
+    turnDisplay.textContent = `Waiting for ${data.players.P2} to choose poisoned M&M...`;
     return;
   }
 

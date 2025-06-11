@@ -31,12 +31,23 @@
   <div id="winnerText"></div>
 </div>
 
-    <div class="grid grid-cols-5 gap-4" id="mmGrid"></div>
-    <div class="mt-4 hidden text-center" id="winnerScreen">
-      <h2 class="text-2xl font-bold text-green-700" id="winnerText"></h2>
-      <button onclick="location.reload()" class="mt-2 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">Play Again</button>
+<!-- M&M Grid Container -->
+<div class="max-w-2xl mx-auto px-4">
+  <div id="mmGrid" class="grid grid-cols-5 gap-4 mt-6">
+    <!-- M&Ms will be dynamically generated here -->
+  </div>
+
+  <!-- Winner Screen -->
+  <div id="winnerScreen" class="mt-8 hidden text-center">
+    <div class="bg-white shadow-lg p-6 rounded-xl border border-green-300">
+      <h2 id="winnerText" class="text-3xl font-bold text-green-700 mb-4"></h2>
+      <button onclick="window.location.reload()" class="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-lg shadow-md transition">
+        🍬 Play Again
+      </button>
     </div>
   </div>
+</div>
+
 
   <script type="module" src="game.js"></script>
 </body>
