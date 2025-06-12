@@ -198,7 +198,7 @@ function initializeMMGrid() {
   for (let i = 0; i < 25; i++) {
     const mm = document.createElement("div");
     const randomColor = mmColors[Math.floor(Math.random() * mmColors.length)];
-    mm.className = `mm w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl cursor-pointer shadow-inner shadow-black transition-transform duration-150 hover:scale-110 ${randomColor}`;
+    mm.className = `mm w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl cursor-pointer shadow-inner shadow-black transition-transform duration-150 hover:scale-110 user-select-none ${randomColor}`;
     mm.textContent = "m";
     mm.dataset.index = i;
     mm.addEventListener("click", () => handleClick(i));
