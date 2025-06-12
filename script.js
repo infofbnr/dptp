@@ -32,7 +32,6 @@ const gameScreen = document.getElementById("gameScreen");
 const turnDisplay = document.getElementById("turnDisplay");
 const mmGrid = document.getElementById("mmGrid");
 
-
 let roomCode = null;
 let playerRole = null; // "P1" or "P2"
 let gameDataUnsubscribe = null;
@@ -40,9 +39,8 @@ let gameDataUnsubscribe = null;
 let player2Name = null;
 let player1Name = null;
 
-
 createRoomBtn.addEventListener("click", async () => {
-    player1Name = playerNameInput.value.trim();
+  player1Name = playerNameInput.value.trim();
   if (!player1Name) {
     alert("Please enter your name");
     return;
@@ -67,47 +65,29 @@ createRoomBtn.addEventListener("click", async () => {
 
   playerRole = "P1";
 
-  showGameScreen();
-
-  turnDisplay.textContent = `Waiting for other player to join... (Room Code: ${roomCode})`;
+  // Show loading area
+  showLoadingArea();
 
   // Listen for changes to the room (especially for Player 2 joining)
-gameDataUnsubscribe = onSnapshot(doc(db, "games", roomCode), (docSnap) => {
-  if (!docSnap.exists()) return;
+  gameDataUnsubscribe = onSnapshot(doc(db, "games", roomCode), (docSnap) => {
+    if (!docSnap.exists()) return;
 
-  const data = docSnap.data();
+    const data = docSnap.data();
 
-  if (playerRole === "P1") {
-    // Player 1 waiting for Player 2 to join
-if (!data.players.P2) {
-  turnDisplay.textContent = `Waiting for Player 2 to join... (Room Code: ${roomCode})`;
-} else if (data.poisonedByP2 === null) {
-  turnDisplay.textContent = `Player 2 (${data.players.P2}) joined! Pick your poisoned M&M first.`;
-    } else {
-      // Both poisoned picked, game starting
-      startGame(data);
+    if (playerRole === "P1") {
+      if (!data.players.P2) {
+        turnDisplay.textContent = `Waiting for Player 2 to join... (Room Code: ${roomCode}).`;
+      } else {
+        turnDisplay.textContent = `Player 2 (${player2Name}) joined! Starting the game...`;
+        startGame(data); // Start the game for Player 1
+      }
+    } else if (playerRole === "P2") {
+      // Check if the game can start for Player 2
+      if (data.poisonedByP1 !== null && data.poisonedByP2 !== null) {
+        startGame(data); // Start the game for Player 2
+      }
     }
-  }
-
-  if (playerRole === "P2") {
-    if (!data.players.P1) {
-      turnDisplay.textContent = "Waiting for Player 1 (host)...";
-    } else if (data.poisonedByP1 === null) {
-      turnDisplay.textContent = `Waiting for ${player1Name} to pick poisoned M&M...`;
-    } else if (data.poisonedByP2 === null) {
-      // It's Player 2's turn to pick poisoned M&M
-      turnDisplay.textContent = `Your turn: pick your poisoned M&M`;
-    } else {
-      // Both poisoned picked, game starting
-      startGame(data);
-    }
-  }
-  
-  // Check if game over
-  if (data.gameOver) {
-    endGame(data.winnerMessage, data.winnerRole);
-  }
-});
+  });
 });
 
 joinRoomBtn.addEventListener("click", async () => {
@@ -162,17 +142,21 @@ joinRoomBtn.addEventListener("click", async () => {
 
     // Update UI based on game state for Player 2
     if (data.poisonedByP1 === null) {
-  turnDisplay.textContent = `Waiting for ${data.players.P1} to pick poisoned M&M...`;
-} else if (data.poisonedByP2 === null) {
-  turnDisplay.textContent = `${data.players.P1} picked their poisoned M&M first. Your turn: pick your poisoned M&M.`;
-} else if (data.currentTurn) {
-      // Normal gameplay turns
+      turnDisplay.textContent = `Waiting for ${data.players.P1} to pick poisoned M&M...`;
+    } else if (data.poisonedByP2 === null) {
+      turnDisplay.textContent = `${data.players.P1} picked their poisoned M&M first. Your turn: pick your poisoned M&M.`;
+    } else if (data.currentTurn) {
       if (data.currentTurn === "P2") {
         turnDisplay.textContent = `Your turn: pick an M&M to eat`;
       } else {
         turnDisplay.textContent = `Waiting for ${data.players.P1} to pick an M&M...`;
       }
       updateGameUI(data);
+    }
+
+    // Start the game for Player 2 if both poisoned M&Ms are chosen
+    if (data.poisonedByP1 !== null && data.poisonedByP2 !== null) {
+      startGame(data); // Start the game for Player 2
     }
   });
 });
@@ -186,6 +170,14 @@ function generateRoomCode() {
     code += letters.charAt(Math.floor(Math.random() * letters.length));
   }
   return code;
+}
+
+// Show loading area while waiting for Player 2
+function showLoadingArea() {
+  welcomeScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+  turnDisplay.textContent = `Room Code: ${roomCode}. Share this link with Player 2.`;
+  // Here you can add a button or link to copy the room code
 }
 
 // Show game screen and hide welcome
@@ -220,7 +212,6 @@ let poisonedByP2 = null;
 let currentTurn = null;
 let eaten = [];
 let gameOver = false;
-
 
 async function handleClick(index) {
   if (gameOver) return;
@@ -260,7 +251,6 @@ async function handleClick(index) {
     (playerRole === "P1" && (index === poisonedByP2 || index === poisonedByP1)) ||
     (playerRole === "P2" && (index === poisonedByP1 || index === poisonedByP2))
   ) {
-    // Determine winnerRole and message for generic WIN/LOSS display
     let winnerRole;
     let message;
 
@@ -268,13 +258,11 @@ async function handleClick(index) {
       (playerRole === "P1" && index === poisonedByP2) ||
       (playerRole === "P2" && index === poisonedByP1)
     ) {
-      // Ate opponent's poisoned M&M → current player loses
       winnerRole = playerRole === "P1" ? "P2" : "P1";
-      message = "💀 Player lost by eating opponent's poisoned M&M.";
+      message = "💀 You lost by eating your opponent's poisoned M&M.";
     } else {
-      // Ate own poisoned M&M → current player loses
       winnerRole = playerRole === "P1" ? "P2" : "P1";
-      message = "☠️ Player lost by eating their own poisoned M&M.";
+      message = "☠️ You lost by eating your own poisoned M&M.";
     }
 
     await endGameFirestore(message, winnerRole);
@@ -294,8 +282,6 @@ async function handleClick(index) {
   turnDisplay.textContent = "Opponent's turn";
 }
 
-
-
 // Update a single field in Firestore game document
 async function updateGameField(field, value) {
   const gameDocRef = doc(db, "games", roomCode);
@@ -304,19 +290,25 @@ async function updateGameField(field, value) {
 
 // Start the game locally with data from Firestore
 function startGame(data) {
+  // Only initialize the grid if it's the first time starting the game
+  if (data.poisonedByP1 === null && data.poisonedByP2 === null) {
+    initializeMMGrid(); // Initialize the M&M grid when the game starts
+  }
+
   poisonedByP1 = data.poisonedByP1;
   poisonedByP2 = data.poisonedByP2;
   currentTurn = data.currentTurn;
-  eaten = data.eaten;
+  eaten = data.eaten || [];
   gameOver = data.gameOver;
 
-  updateGameUI(data);
+  updateGameUI(data); // Update the UI based on the current game state
 }
 
 // Update UI based on game state
 function updateGameUI(data) {
   const mmElements = document.querySelectorAll(".mm");
-  
+
+  // Update state variables
   poisonedByP1 = data.poisonedByP1;
   poisonedByP2 = data.poisonedByP2;
   currentTurn = data.currentTurn;
@@ -328,44 +320,38 @@ function updateGameUI(data) {
     const idx = parseInt(mm.dataset.index);
     if (eaten.includes(idx)) {
       mm.classList.add("eaten", "opacity-30", "scale-90");
-      mm.style.pointerEvents = "none";
+      mm.style.pointerEvents = "none"; // Disable clicking on eaten M&Ms
     } else {
       mm.classList.remove("eaten", "opacity-30", "scale-90");
-      mm.style.pointerEvents = "auto";
+      mm.style.pointerEvents = "auto"; // Enable clicking on uneaten M&Ms
     }
   });
 
   // If game over, highlight poisoned M&Ms and disable clicks
   if (gameOver) {
-    mmElements.forEach(mm => (mm.style.pointerEvents = "none"));
-    mmElements[poisonedByP1]?.classList.add("ring", "ring-blue-400", "ring-4");
-    mmElements[poisonedByP2]?.classList.add("ring", "ring-green-400", "ring-4");
+    mmElements.forEach(mm => (mm.style.pointerEvents = "none")); // Disable all clicks
+    if (poisonedByP1 !== null) {
+      mmElements[poisonedByP1]?.classList.add("ring", "ring-blue-400", "ring-4");
+    }
+    if (poisonedByP2 !== null) {
+      mmElements[poisonedByP2]?.classList.add("ring", "ring-green-400", "ring-4");
+    }
     turnDisplay.textContent = data.winnerMessage || "Game Over!";
     return;
   }
 
   // Determine and show message based on phase and turn
-
   if (playerRole === "P1" && poisonedByP1 === null) {
     turnDisplay.textContent = "Your turn: Choose your poisoned M&M";
-    return;
-  }
-
-  if (playerRole === "P2" && poisonedByP2 === null) {
+  } else if (playerRole === "P2" && poisonedByP2 === null) {
     turnDisplay.textContent = "Your turn: Choose your poisoned M&M";
-    return;
-  }
-
-  // Both poisoned M&Ms picked, now eating phase
-  if (currentTurn === playerRole) {
+  } else if (currentTurn === playerRole) {
     turnDisplay.textContent = "Your turn: Eat an M&M!";
   } else {
     turnDisplay.textContent = "Opponent's turn";
-    // Disable clicking if it's opponent's turn
-    mmElements.forEach(mm => (mm.style.pointerEvents = "none"));
+    mmElements.forEach(mm => (mm.style.pointerEvents = "none")); // Disable clicking if it's opponent's turn
   }
 }
-
 async function endGameFirestore(message, winnerRole) {
   // Update Firestore with game over and winner
   await updateGameField("gameOver", true);
@@ -378,54 +364,25 @@ async function endGameFirestore(message, winnerRole) {
 
 function endGame(message, winnerRole = null) {
   gameOver = true;
-  turnDisplay.textContent = "";
+  turnDisplay.textContent = message || "Game Over!";
 
   // Disable all M&M clicks
   const mmElements = document.querySelectorAll(".mm");
-  mmElements.forEach((mm) => (mm.style.pointerEvents = "none"));
+  mmElements.forEach(mm => (mm.style.pointerEvents = "none"));
 
-  const player1Status = document.getElementById("player1Status");
-  const player2Status = document.getElementById("player2Status");
-  const winnerText = document.getElementById("winnerText");
+  // Highlight poisoned M&Ms
+  if (poisonedByP1 !== null) {
+    mmElements[poisonedByP1]?.classList.add("ring", "ring-blue-400", "ring-4");
+  }
+  if (poisonedByP2 !== null) {
+    mmElements[poisonedByP2]?.classList.add("ring", "ring-green-400", "ring-4");
+  }
+
+  // Optionally show a winner screen if you have one
   const winnerScreen = document.getElementById("winnerScreen");
-
-  // Clear previous status & classes
-  if (player1Status && player2Status) {
-    player1Status.textContent = "";
-    player2Status.textContent = "";
-    player1Status.className = "status-label";
-    player2Status.className = "status-label";
-  }
-
-  if (winnerText) {
-    winnerText.textContent = "";
-  }
-
-  if (winnerRole !== null && winnerScreen) {
-    if (winnerRole === "P1") {
-      player1Status.textContent = "WIN";
-      player1Status.classList.add("status-win");
-      player2Status.textContent = "LOSS";
-      player2Status.classList.add("status-loss");
-    } else if (winnerRole === "P2") {
-      player1Status.textContent = "LOSS";
-      player1Status.classList.add("status-loss");
-      player2Status.textContent = "WIN";
-      player2Status.classList.add("status-win");
-    } else {
-      player1Status.textContent = "DRAW";
-      player2Status.textContent = "DRAW";
-    }
-
-    winnerText.textContent = message;
+  const winnerText = document.getElementById("winnerText");
+  if (winnerScreen && winnerText) {
+    winnerText.textContent = message || "Game Over!";
     winnerScreen.classList.remove("hidden");
-  } else {
-    // fallback banner if no winnerScreen element
-    const banner = document.createElement("div");
-    banner.className =
-      "fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black bg-opacity-80 text-white text-3xl font-bold z-50";
-    banner.textContent = message;
-    document.body.appendChild(banner);
   }
 }
-
